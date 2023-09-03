@@ -5,7 +5,8 @@
 ## Contracts
 
 ```ml
-ERC20TaxSwap - Basic functionality for token that taxes swaps through a UniswapV2 pair
+tokens
+├─ ERC20TaxSwap - "Basic functionality for token that taxes swaps through a UniswapV2 pair"
 ```
 
 ## Safety
