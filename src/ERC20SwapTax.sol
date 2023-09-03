@@ -7,11 +7,11 @@ import {Ownable} from "./dependencies/Ownable.sol";
 import {IUniswapV2Router02} from "./interfaces/IUniswapV2Router02.sol";
 import {IUniswapV2Factory} from "./interfaces/IUniswapV2Factory.sol";
 
-/// @title Basic ERC20 Tax Token
-/// @notice Token with a tax taken on buys and sells to the UniswapV2Router
+/// @title ERC20 Swap Tax Token
+/// @notice Token with a tax on swaps through the UniswapV2Pair
 /// @dev Tax is swapped to ETH and sent to dev wallet
 /// @dev This is a basic implementation and there is no wallet restrictions or swap delays
-contract ERC20Tax is IERC20Metadata, Ownable {
+contract ERC20SwapTax is IERC20Metadata, Ownable {
     /// @notice The UniswapV2 Router
     IUniswapV2Router02 public immutable uniswapV2Router;
 
