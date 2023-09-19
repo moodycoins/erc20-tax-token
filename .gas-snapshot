@@ -1,4 +1,4 @@
-ERC20SwapTaxTest:testBlacklist() (gas: 96797)
+ERC20SwapTaxTest:testBlacklist() (gas: 96785)
 ERC20SwapTaxTest:testLimits() (gas: 392102)
 ERC20SwapTaxTest:testSetUp() (gas: 12807)
 ERC20SwapTaxTest:testSwapBuy(uint96) (runs: 256, μ: 156150, ~: 156150)
