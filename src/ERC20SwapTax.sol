@@ -43,8 +43,8 @@ contract ERC20SwapTax is ERC20, Ownable {
     uint8 public liquidityFee = 1;
     uint8 public teamFee = 1;
 
-    uint256 public swapThreshold;
-    uint256 public maxSwap;
+    uint128 public swapThreshold;
+    uint128 public maxSwap;
 
     mapping(address => bool) public ammPairs;
 
@@ -81,8 +81,8 @@ contract ERC20SwapTax is ERC20, Ownable {
 
         maxTransaction     = MAX_SUPPLY.mulDiv(1, 100);     // 1%
         maxWallet          = MAX_SUPPLY.mulDiv(1, 100);     // 1%
-        swapThreshold      = MAX_SUPPLY.mulDiv(5, 10_000);  // 0.05%
-        maxSwap            = MAX_SUPPLY.mulDiv(50, 10_000); // 0.50%
+        swapThreshold      = uint128(MAX_SUPPLY.mulDiv(5, 10_000));  // 0.05%
+        maxSwap            = uint128(MAX_SUPPLY.mulDiv(50, 10_000)); // 0.50%
 
         excludeFromFees(DEAD, true);
         excludeMaxTransaction(DEAD, true);
@@ -113,10 +113,17 @@ contract ERC20SwapTax is ERC20, Ownable {
     }
 
     /// @dev Update the threshold for contract swaps
-    function updateSwapThreshold(uint256 newAmount) external onlyOwner {
-        require(newAmount >= (totalSupply * 1) / 100000, "BSA"); // >= 0.001%
-        require(newAmount <= (totalSupply * 5) / 1000, "BSA"); // <= 0.5%
-        swapThreshold = newAmount;
+    function updateSwapThreshold(uint128 newThreshold) external onlyOwner {
+        require(newThreshold >= (totalSupply * 1) / 100_000, "BSA"); // >= 0.001%
+        require(newThreshold <= (totalSupply * 5) / 1000, "BSA"); // <= 0.5%
+        swapThreshold = newThreshold;
+    }
+
+    /// @dev Update the max contract swap
+    function updateMaxSwap(uint128 newMaxSwap) external onlyOwner {
+        require(newMaxSwap >= (totalSupply * 1) / 100_000, "BSA"); // >= 0.001%
+        require(newMaxSwap <= (totalSupply * 5) / 1000, "BSA"); // <= 0.5%
+        maxSwap = newMaxSwap;
     }
 
     /// @dev Update the max transaction while limits are in effect
