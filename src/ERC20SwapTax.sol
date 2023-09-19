@@ -285,6 +285,7 @@ contract ERC20SwapTax is ERC20, Ownable {
         }
 
         unchecked {
+            // no underflow since amount > fee always
             balanceOf[to] += (amount - fee);
         }
         emit Transfer(from, to, amount - fee);
