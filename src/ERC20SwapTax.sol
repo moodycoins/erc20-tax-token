@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.20;
 
 import {Math} from "./libraries/Math.sol"; 
@@ -62,7 +61,7 @@ contract ERC20SwapTax is ERC20, Ownable {
     receive() external payable {}
 
     // prettier-ignore
-    constructor(address _protocolWallet) ERC20("Stox", "STOX", 18) {
+    constructor(string memory _name, string memory _symbol, address _protocolWallet) ERC20(_name, _symbol, 18) {
         protocolWallet = _protocolWallet;
         teamWallet = owner();
 
