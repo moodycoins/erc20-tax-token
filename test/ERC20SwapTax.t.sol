@@ -8,7 +8,7 @@ import "../src/interfaces/IUniswapV2Factory.sol";
 
 import "../src/ERC20SwapTax.sol";
 
-contract StoxTest is Test {
+contract ERC20SwapTaxTest is Test {
     uint256 mainnetFork;
 
     ERC20SwapTax taxToken;
@@ -24,8 +24,8 @@ contract StoxTest is Test {
     uint256 constant BUY_FEE = 3;
     uint256 constant SELL_FEE = 3;
 
-    address[] wethToStox;
-    address[] stoxToWeth;
+    address[] wethToToken;
+    address[] tokenToWeth;
 
     uint256 constant initialSupply = 10_000_000 * 1e18;
 
@@ -38,7 +38,7 @@ contract StoxTest is Test {
 
         owner = address(this);
 
-        taxToken = new ERC20SwapTax(address(protocolWallet));
+        taxToken = new ERC20SwapTax("TEST", "TEST", address(protocolWallet));
         router = IUniswapV2Router02(taxToken.uniswapV2Router());
         pair = taxToken.uniswapV2Pair();
         weth = IERC20(router.WETH());
@@ -49,15 +49,15 @@ contract StoxTest is Test {
 
         deal(user, 10 ether);
 
-        wethToStox.push(address(weth));
-        wethToStox.push(address(taxToken));
+        wethToToken.push(address(weth));
+        wethToToken.push(address(taxToken));
 
-        stoxToWeth.push(address(taxToken));
-        stoxToWeth.push(address(weth));
+        tokenToWeth.push(address(taxToken));
+        tokenToWeth.push(address(weth));
 
         router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 1 ether}(
             0,
-            wethToStox,
+            wethToToken,
             owner,
             block.timestamp
         );
@@ -78,7 +78,7 @@ contract StoxTest is Test {
 
         vm.startPrank(user);
 
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 1 ether}(0, wethToStox, user, block.timestamp);
+        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 1 ether}(0, wethToToken, user, block.timestamp);
     }
 
     function test_GAS_swapSell() public {
@@ -92,7 +92,7 @@ contract StoxTest is Test {
         router.swapExactTokensForETHSupportingFeeOnTransferTokens(
             taxToken.balanceOf(user),
             0,
-            stoxToWeth,
+            tokenToWeth,
             user,
             block.timestamp
         );
@@ -104,14 +104,14 @@ contract StoxTest is Test {
 
         vm.startPrank(user);
 
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 5 ether}(0, wethToStox, user, block.timestamp);
+        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 5 ether}(0, wethToToken, user, block.timestamp);
 
         taxToken.approve(address(router), type(uint256).max);
 
         router.swapExactTokensForETHSupportingFeeOnTransferTokens(
             taxToken.balanceOf(user),
             0,
-            stoxToWeth,
+            tokenToWeth,
             user,
             block.timestamp
         );
@@ -126,38 +126,38 @@ contract StoxTest is Test {
         deal(user, amount);
         vm.startPrank(user);
 
-        uint256 initStox = taxToken.balanceOf(user);
+        uint256 initToken = taxToken.balanceOf(user);
         uint256 initEth = user.balance;
-        uint256 initStoxContractBal = taxToken.balanceOf(address(taxToken));
+        uint256 initTokenContractBal = taxToken.balanceOf(address(taxToken));
 
         uint256 expectedOut = router.getAmountOut(amount, weth.balanceOf(pair), taxToken.balanceOf(pair));
 
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: amount}(0, wethToStox, user, block.timestamp);
+        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: amount}(0, wethToToken, user, block.timestamp);
 
-        uint256 finalStox = taxToken.balanceOf(user);
+        uint256 finalToken = taxToken.balanceOf(user);
         uint256 finalEth = user.balance;
-        uint256 finalStoxContractBal = taxToken.balanceOf(address(taxToken));
+        uint256 finalTokenContractBal = taxToken.balanceOf(address(taxToken));
 
-        uint256 actualOut = finalStox - initStox;
+        uint256 actualOut = finalToken - initToken;
         uint256 fee = (expectedOut * BUY_FEE) / 100;
 
         assertEq(initEth - finalEth, amount);
         assertEq(actualOut, expectedOut - fee);
 
-        assertEq(finalStoxContractBal - initStoxContractBal, fee);
+        assertEq(finalTokenContractBal - initTokenContractBal, fee);
     }
 
     function testSwapSell(uint96 amount) public {
         taxToken.enableTrading();
         taxToken.removeLimits();
 
-        uint256 initStox = taxToken.balanceOf(user);
+        uint256 initToken = taxToken.balanceOf(user);
         uint256 initContractBal = taxToken.balanceOf(address(taxToken));
         uint256 initEth = user.balance;
         uint256 fee = (amount * BUY_FEE) / 100;
         uint256 inWithFee = amount - fee;
 
-        vm.assume(amount > 0.001 ether && amount < initStox);
+        vm.assume(amount > 0.001 ether && amount < initToken);
 
         uint256 expectedOut = router.getAmountOut(inWithFee, taxToken.balanceOf(pair), weth.balanceOf(pair));
 
@@ -165,14 +165,14 @@ contract StoxTest is Test {
 
         taxToken.approve(address(router), type(uint256).max);
 
-        router.swapExactTokensForETHSupportingFeeOnTransferTokens(amount, 0, stoxToWeth, user, block.timestamp);
+        router.swapExactTokensForETHSupportingFeeOnTransferTokens(amount, 0, tokenToWeth, user, block.timestamp);
 
-        uint256 finalStox = taxToken.balanceOf(user);
+        uint256 finalToken = taxToken.balanceOf(user);
         uint256 finalEth = user.balance;
         uint256 finalContractBal = taxToken.balanceOf(address(taxToken));
 
         assertEq(finalEth - initEth, expectedOut);
-        assertEq(initStox - finalStox, amount);
+        assertEq(initToken - finalToken, amount);
         assertEq(finalContractBal - initContractBal, fee);
     }
 
@@ -183,9 +183,9 @@ contract StoxTest is Test {
         deal(user, 100 ether);
         vm.startPrank(user);
 
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 5 ether}(0, wethToStox, user, block.timestamp);
+        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 5 ether}(0, wethToToken, user, block.timestamp);
 
-        uint256 initStox = taxToken.balanceOf(user);
+        uint256 initToken = taxToken.balanceOf(user);
 
         uint256 initContractBal = taxToken.balanceOf(address(taxToken));
         uint256 initPoolBal = IERC20(pair).balanceOf(owner);
@@ -198,11 +198,11 @@ contract StoxTest is Test {
 
         assertGt(toSwap, 0);
 
-        vm.assume(amount > 0.001 ether && amount < initStox);
+        vm.assume(amount > 0.001 ether && amount < initToken);
 
         taxToken.approve(address(router), type(uint256).max);
 
-        router.swapExactTokensForETHSupportingFeeOnTransferTokens(amount, 0, stoxToWeth, user, block.timestamp);
+        router.swapExactTokensForETHSupportingFeeOnTransferTokens(amount, 0, tokenToWeth, user, block.timestamp);
 
         uint256 finalContractBal = taxToken.balanceOf(address(taxToken));
         uint256 finalPoolBal = IERC20(pair).balanceOf(owner);
@@ -255,7 +255,7 @@ contract StoxTest is Test {
         vm.prank(user);
         router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 10 ether}(
             0,
-            wethToStox,
+            wethToToken,
             user,
             block.timestamp
         );
@@ -265,7 +265,7 @@ contract StoxTest is Test {
         vm.prank(user);
         router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 0.001 ether}(
             0,
-            wethToStox,
+            wethToToken,
             user,
             block.timestamp
         );
@@ -276,7 +276,7 @@ contract StoxTest is Test {
         // fails because MAX_TX - sell
         vm.expectRevert(bytes("TransferHelper: TRANSFER_FROM_FAILED"));
         vm.prank(user);
-        router.swapExactTokensForETHSupportingFeeOnTransferTokens(userBal, 0, stoxToWeth, user, block.timestamp);
+        router.swapExactTokensForETHSupportingFeeOnTransferTokens(userBal, 0, tokenToWeth, user, block.timestamp);
 
         deal(otherUser, 10 ether);
 
@@ -284,7 +284,7 @@ contract StoxTest is Test {
         vm.prank(otherUser);
         router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 0.001 ether}(
             0,
-            wethToStox,
+            wethToToken,
             otherUser,
             block.timestamp
         );
