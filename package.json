@@ -1,15 +1,17 @@
 {
   "name": "erc20-tax-token",
-  "version": "1.0.0",
-  "description": "Minimal and gas optimized implementations of various ERC20 tax schemes.",
-  "author": "MoodyCoins",
   "license": "MIT",
+  "version": "1.0.0",
+  "description": "Minimal and gas optimized implementations of ERC20 swap tax schemes.",
   "files": [
     "src/**/*.sol"
   ],
   "directories": {
-    "lib": "lib",
-    "test": "test"
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MoodyCoins/erc20-tax-token.git"
   },
   "scripts": {
     "install:all": "npm install && forge install",
