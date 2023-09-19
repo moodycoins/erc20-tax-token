@@ -31,26 +31,25 @@ contract ERC20SwapTax is ERC20, Ownable {
 
     bool private _swapping;
 
-    bool public limitsInEffect = true;
+    bool public limitsActive = false;
+    bool public blacklistActive = false;
 
     bool public swapEnabled = false;
     bool public tradingActive = false;
-    bool public blacklistRenounced = false;
 
-    uint8 public swapFee = 3;
+    uint8 public swapFee;
 
-    uint8 public protocolFee = 1;
-    uint8 public liquidityFee = 1;
-    uint8 public teamFee = 1;
+    uint8 public protocolFee;
+    uint8 public liquidityFee;
+    uint8 public teamFee;
 
     uint128 public swapThreshold;
     uint128 public maxSwap;
 
-    mapping(address => bool) public ammPairs;
-
+    mapping(address => bool) public isAmm;
     mapping(address => bool) public isBlacklisted;
     mapping(address => bool) public isExcludedFromFees;
-    mapping(address => bool) public isExcludedMaxTransaction;
+    mapping(address => bool) public isExcludedFromLimits;
 
     event AmmPairUpdated(address indexed pair, bool value);
     event ExcludeFromFees(address indexed account, bool isExcluded);
@@ -60,13 +59,33 @@ contract ERC20SwapTax is ERC20, Ownable {
 
     receive() external payable {}
 
-    // prettier-ignore
-    constructor(string memory _name, string memory _symbol, address _protocolWallet) ERC20(_name, _symbol, 18) {
+    /// @dev Constructor
+    /// @param _name The token name
+    /// @param _symbol The token symbol
+    /// @param _protocolWallet The wallet to receive protocol fee portion
+    /// @param _hasLimits Are there transaction and wallet limits in place
+    /// @param _hasBlacklist Is there a blacklist for this token
+    constructor(
+        string memory _name,
+        string memory _symbol,
+        uint8 _protocolFee,
+        uint8 _liquidityFee,
+        uint8 _teamFee,
+        address _protocolWallet,
+        bool _hasLimits,
+        bool _hasBlacklist
+    ) ERC20(_name, _symbol, 18) {
         protocolWallet = _protocolWallet;
         teamWallet = owner();
 
+        if (_hasLimits) limitsActive = true;
+        if (_hasBlacklist) blacklistActive = true;
+
+        updateFees(_protocolFee, _liquidityFee, _teamFee);
+
         IUniswapV2Router02 router = IUniswapV2Router02(
-            // Uniswap V2 router address on Mainnet - update if necessary
+            // Uniswap V2 router address on Mainnet
+            // Must update this if necessary
             0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
         );
 
@@ -74,24 +93,24 @@ contract ERC20SwapTax is ERC20, Ownable {
         uniswapV2Router = address(router);
         uniswapV2Pair = IUniswapV2Factory(router.factory()).createPair(address(this), WETH);
 
-        setAmmPair(uniswapV2Pair, true);
+        setAmm(uniswapV2Pair, true);
 
-        excludeMaxTransaction(uniswapV2Pair, true);
-        excludeMaxTransaction(uniswapV2Router, true);
+        excludeFromLimits(uniswapV2Pair, true);
+        excludeFromLimits(uniswapV2Router, true);
 
-        maxTransaction     = MAX_SUPPLY.mulDiv(1, 100);     // 1%
-        maxWallet          = MAX_SUPPLY.mulDiv(1, 100);     // 1%
-        swapThreshold      = uint128(MAX_SUPPLY.mulDiv(5, 10_000));  // 0.05%
-        maxSwap            = uint128(MAX_SUPPLY.mulDiv(50, 10_000)); // 0.50%
+        maxTransaction = MAX_SUPPLY.mulDiv(1, 100); // 1%
+        maxWallet = MAX_SUPPLY.mulDiv(1, 100); // 1%
+        swapThreshold = uint128(MAX_SUPPLY.mulDiv(5, 10_000)); // 0.05%
+        maxSwap = uint128(MAX_SUPPLY.mulDiv(50, 10_000)); // 0.50%
 
         excludeFromFees(DEAD, true);
-        excludeMaxTransaction(DEAD, true);
+        excludeFromLimits(DEAD, true);
 
         excludeFromFees(owner(), true);
-        excludeMaxTransaction(owner(), true);
+        excludeFromLimits(owner(), true);
 
         excludeFromFees(address(this), true);
-        excludeMaxTransaction(address(this), true);
+        excludeFromLimits(address(this), true);
 
         // approve router
         allowance[address(this)][uniswapV2Router] = type(uint256).max;
@@ -109,7 +128,7 @@ contract ERC20SwapTax is ERC20, Ownable {
 
     /// @dev Irreversible action, limits can never be reinstated
     function removeLimits() external onlyOwner {
-        limitsInEffect = false;
+        limitsActive = false;
     }
 
     /// @dev Update the threshold for contract swaps
@@ -144,7 +163,7 @@ contract ERC20SwapTax is ERC20, Ownable {
     }
 
     /// @dev Update the swap fees
-    function updateFees(uint8 _protocolFee, uint8 _liquidityFee, uint8 _teamFee) external onlyOwner {
+    function updateFees(uint8 _protocolFee, uint8 _liquidityFee, uint8 _teamFee) public onlyOwner {
         require((swapFee = _protocolFee + _liquidityFee + _teamFee) <= MAX_TAX, "BF");
         protocolFee = _protocolFee;
         liquidityFee = _liquidityFee;
@@ -152,8 +171,8 @@ contract ERC20SwapTax is ERC20, Ownable {
     }
 
     /// @dev Exclude account from the limited max transaction size
-    function excludeMaxTransaction(address account, bool excluded) public onlyOwner {
-        isExcludedMaxTransaction[account] = excluded;
+    function excludeFromLimits(address account, bool excluded) public onlyOwner {
+        isExcludedFromLimits[account] = excluded;
     }
 
     /// @dev Exclude account from all fees
@@ -163,10 +182,10 @@ contract ERC20SwapTax is ERC20, Ownable {
     }
 
     /// @dev Designate address as an AMM pair to process fees
-    function setAmmPair(address pair, bool isPair) public onlyOwner {
-        if (!isPair) require(pair != uniswapV2Pair, "FP");
-        ammPairs[pair] = isPair;
-        emit AmmPairUpdated(pair, isPair);
+    function setAmm(address account, bool amm) public onlyOwner {
+        if (!amm) require(account != uniswapV2Pair, "FP");
+        isAmm[account] = amm;
+        emit AmmPairUpdated(account, amm);
     }
 
     /// @dev Update the protocol wallet
@@ -189,16 +208,16 @@ contract ERC20SwapTax is ERC20, Ownable {
             require(isExcludedFromFees[from] || isExcludedFromFees[to], "TC");
         }
         // buy
-        if (ammPairs[from] && !isExcludedMaxTransaction[to]) {
+        if (isAmm[from] && !isExcludedFromLimits[to]) {
             require(amount <= maxTransaction, "MAX_TX");
             require(amount + balanceOf[to] <= maxWallet, "MAX_WALLET");
         }
         // sell
-        else if (ammPairs[to] && !isExcludedMaxTransaction[from]) {
+        else if (isAmm[to] && !isExcludedFromLimits[from]) {
             require(amount <= maxTransaction, "MAX_TX");
         }
         // transfer
-        else if (!isExcludedMaxTransaction[to]) {
+        else if (!isExcludedFromLimits[to]) {
             require(amount + balanceOf[to] <= maxWallet, "MAX_WALLET");
         }
     }
@@ -209,7 +228,7 @@ contract ERC20SwapTax is ERC20, Ownable {
     function _transfer(address from, address to, uint256 amount) internal override {
         require(!(isBlacklisted[from] || isBlacklisted[to]), "BL");
 
-        if (limitsInEffect) _checkLimits(from, to, amount);
+        if (limitsActive) _checkLimits(from, to, amount);
 
         bool excluded = isExcludedFromFees[from] || isExcludedFromFees[to];
         uint8 _swapFee = swapFee;
@@ -224,7 +243,7 @@ contract ERC20SwapTax is ERC20, Ownable {
         // if currently swapping exclude from all fees
         excluded = _swapping;
 
-        bool isBuy = ammPairs[from];
+        bool isBuy = isAmm[from];
 
         if (isBuy || excluded || balanceOf[address(this)] < swapThreshold || !swapEnabled) {
             // do nothing
@@ -246,7 +265,7 @@ contract ERC20SwapTax is ERC20, Ownable {
 
         uint256 fee = 0;
 
-        if (!(isBuy || ammPairs[to]) || excluded) {
+        if (!(isBuy || isAmm[to]) || excluded) {
             // do nothing
         } else {
             fee = amount.mulDiv(_swapFee, 100);
@@ -338,7 +357,7 @@ contract ERC20SwapTax is ERC20, Ownable {
 
     /// @dev Blacklist an account
     function blacklist(address account) public onlyOwner {
-        require(!blacklistRenounced, "RK");
+        require(blacklistActive, "RK");
         require(account != address(uniswapV2Pair) && account != address(uniswapV2Router), "BLU");
         isBlacklisted[account] = true;
     }
@@ -351,6 +370,6 @@ contract ERC20SwapTax is ERC20, Ownable {
 
     /// @dev Renounce blacklist authority
     function renounceBlacklist() public onlyOwner {
-        blacklistRenounced = true;
+        blacklistActive = false;
     }
 }
