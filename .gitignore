@@ -1,9 +1,15 @@
-# Compiler files
+# Compiler
 cache/
 out/
 
-# Dotenv file
+# Flat
+flat/
+
+# Node
+node_modules/
+
+# Dotenv
 .env
 
-# vscode
+# Vscode
 .vscode/
