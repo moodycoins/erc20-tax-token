@@ -62,6 +62,9 @@ contract ERC20SwapTax is ERC20, Ownable {
     /// @dev Constructor
     /// @param _name The token name
     /// @param _symbol The token symbol
+    /// @param _protocolFee The fee allocated back to the protocol
+    /// @param _liquidityFee The fee re-allocated into the LP
+    /// @param _teamFee The fee allocated to the team
     /// @param _protocolWallet The wallet to receive protocol fee portion
     /// @param _hasLimits Are there transaction and wallet limits in place
     /// @param _hasBlacklist Is there a blacklist for this token
