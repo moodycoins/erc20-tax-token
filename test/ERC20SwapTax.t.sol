@@ -45,7 +45,14 @@ contract ERC20SwapTaxTest is Test {
 
         taxToken.approve(address(router), type(uint256).max);
 
-        router.addLiquidityETH{value: 3 ether}(address(taxToken), taxToken.balanceOf(owner), 0, 0, owner, block.timestamp);
+        router.addLiquidityETH{value: 3 ether}(
+            address(taxToken),
+            taxToken.balanceOf(owner),
+            0,
+            0,
+            owner,
+            block.timestamp
+        );
 
         deal(user, 10 ether);
 
@@ -78,7 +85,12 @@ contract ERC20SwapTaxTest is Test {
 
         vm.startPrank(user);
 
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 1 ether}(0, wethToToken, user, block.timestamp);
+        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 1 ether}(
+            0,
+            wethToToken,
+            user,
+            block.timestamp
+        );
     }
 
     function test_GAS_swapSell() public {
@@ -104,7 +116,12 @@ contract ERC20SwapTaxTest is Test {
 
         vm.startPrank(user);
 
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 5 ether}(0, wethToToken, user, block.timestamp);
+        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 5 ether}(
+            0,
+            wethToToken,
+            user,
+            block.timestamp
+        );
 
         taxToken.approve(address(router), type(uint256).max);
 
@@ -183,7 +200,12 @@ contract ERC20SwapTaxTest is Test {
         deal(user, 100 ether);
         vm.startPrank(user);
 
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 5 ether}(0, wethToToken, user, block.timestamp);
+        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 5 ether}(
+            0,
+            wethToToken,
+            user,
+            block.timestamp
+        );
 
         uint256 initToken = taxToken.balanceOf(user);
 

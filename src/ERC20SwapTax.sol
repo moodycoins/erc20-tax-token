@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Math} from "./libraries/Math.sol"; 
+import {Math} from "./libraries/Math.sol";
 import {ERC20} from "./dependencies/ERC20.sol";
 import {Ownable} from "./dependencies/Ownable.sol";
 import {IUniswapV2Router02} from "./interfaces/IUniswapV2Router02.sol";
@@ -301,7 +301,7 @@ contract ERC20SwapTax is ERC20, Ownable {
             0,
             path,
             address(this),
-            block.timestamp 
+            block.timestamp
         );
     }
 
