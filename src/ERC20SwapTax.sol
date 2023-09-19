@@ -10,7 +10,12 @@ import {IUniswapV2Factory} from "./interfaces/IUniswapV2Factory.sol";
 /// @title ERC20 Swap Tax
 /// @author MoodyCoins
 /// @notice A gas-optimized ERC20 token with taxable V2 swaps
-/// @dev Includes limiting variables and a blacklist that can be disabled
+/// @dev Blacklist and wallet limits are enabled in the constructor
+/// @dev Rewards can be allocated to three locations:
+///   1. To the teamWallet
+///   2. To the protocolWallet
+///   3. Back into the LP
+/// You can choose the distribution to each in the constructor
 contract ERC20SwapTax is ERC20, Ownable {
     using Math for uint256;
 
@@ -136,8 +141,8 @@ contract ERC20SwapTax is ERC20, Ownable {
 
     /// @dev Update the threshold for contract swaps
     function updateSwapThreshold(uint128 newThreshold) external onlyOwner {
-        require(newThreshold >= (totalSupply * 1) / 100_000, "BSA"); // >= 0.001%
-        require(newThreshold <= (totalSupply * 5) / 1000, "BSA"); // <= 0.5%
+        require(newThreshold >= (totalSupply * 1) / 1_000_000, "BSA"); // >= 0.0001%
+        require(newThreshold <= (totalSupply * 5) / 10_000, "BSA"); // <= 0.05%
         swapThreshold = newThreshold;
     }
 
