@@ -37,11 +37,11 @@ contract ERC20SwapTax is ERC20, Ownable {
     bool public tradingActive = false;
     bool public blacklistRenounced = false;
 
-    uint256 public swapFee = 3;
+    uint8 public swapFee = 3;
 
-    uint256 public protocolFee = 1;
-    uint256 public liquidityFee = 1;
-    uint256 public teamFee = 1;
+    uint8 public protocolFee = 1;
+    uint8 public liquidityFee = 1;
+    uint8 public teamFee = 1;
 
     uint256 public swapThreshold;
     uint256 public maxSwap;
@@ -137,7 +137,7 @@ contract ERC20SwapTax is ERC20, Ownable {
     }
 
     /// @dev Update the swap fees
-    function updateFees(uint256 _protocolFee, uint256 _liquidityFee, uint256 _teamFee) external onlyOwner {
+    function updateFees(uint8 _protocolFee, uint8 _liquidityFee, uint8 _teamFee) external onlyOwner {
         require((swapFee = _protocolFee + _liquidityFee + _teamFee) <= MAX_TAX, "BF");
         protocolFee = _protocolFee;
         liquidityFee = _liquidityFee;
@@ -205,17 +205,17 @@ contract ERC20SwapTax is ERC20, Ownable {
         if (limitsInEffect) _checkLimits(from, to, amount);
 
         bool excluded = isExcludedFromFees[from] || isExcludedFromFees[to];
-        uint256 _fee = swapFee;
+        uint8 _swapFee = swapFee;
 
-        if (excluded || amount == 0 || _fee == 0) {
-            // if any account excluded from fee, finish the transfer
+        if (excluded || _swapFee == 0 || amount == 0) {
+            // no fees or excluded -> process transfer normally
             super._transfer(from, to, amount);
 
             return;
-        } else {
-            // if currently swapping exclude from all fees
-            excluded = _swapping;
         }
+
+        // if currently swapping exclude from all fees
+        excluded = _swapping;
 
         bool isBuy = ammPairs[from];
 
@@ -242,7 +242,7 @@ contract ERC20SwapTax is ERC20, Ownable {
         if (!(isBuy || ammPairs[to]) || excluded) {
             // do nothing
         } else {
-            fee = amount.mulDiv(_fee, 100);
+            fee = amount.mulDiv(_swapFee, 100);
 
             unchecked {
                 balanceOf[address(this)] += fee;
