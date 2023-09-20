@@ -64,11 +64,11 @@ contract ERC20SwapTax is ERC20, Ownable {
     mapping(address => bool) public isExcludedFromFees;
     mapping(address => bool) public isExcludedFromLimits;
 
-    event AmmPairUpdated(address indexed pair, bool value);
+    event AmmUpdated(address indexed pair, bool isAmm);
     event ExcludeFromFees(address indexed account, bool isExcluded);
     event TeamWalletUpdated(address indexed newWallet, address indexed oldWallet);
     event ProtocolWalletUpdated(address indexed newWallet, address indexed oldWallet);
-    event SwapAndAdd(uint256 tokensSwapped, uint256 ethLiquidity, uint256 tokenLiquidity);
+    event SwapAndAdd(uint256 tokensSwapped, uint256 ethToLp, uint256 tokenToLp);
 
     receive() external payable {}
 
@@ -193,7 +193,7 @@ contract ERC20SwapTax is ERC20, Ownable {
     function setAmm(address account, bool amm) public onlyOwner {
         if (!amm) require(account != uniswapV2Pair, "FP");
         isAmm[account] = amm;
-        emit AmmPairUpdated(account, amm);
+        emit AmmUpdated(account, amm);
     }
 
     /// @dev Update the protocol wallet
