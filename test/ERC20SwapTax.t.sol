@@ -139,6 +139,8 @@ contract ERC20SwapTaxTest is Test {
     function testSwapBuy(uint96 amount) public {
         vm.assume(amount > 0 ether);
 
+        uint256 totalSupply = taxToken.totalSupply();
+
         taxToken.enableTrading();
         taxToken.removeLimits();
 
@@ -148,6 +150,7 @@ contract ERC20SwapTaxTest is Test {
         uint256 initToken = taxToken.balanceOf(user);
         uint256 initEth = user.balance;
         uint256 initTokenContractBal = taxToken.balanceOf(address(taxToken));
+        uint256 initPairBal = taxToken.balanceOf(pair);
 
         uint256 expectedOut = router.getAmountOut(amount, weth.balanceOf(pair), taxToken.balanceOf(pair));
 
@@ -156,6 +159,7 @@ contract ERC20SwapTaxTest is Test {
         uint256 finalToken = taxToken.balanceOf(user);
         uint256 finalEth = user.balance;
         uint256 finalTokenContractBal = taxToken.balanceOf(address(taxToken));
+        uint256 finalPairBal = taxToken.balanceOf(pair);
 
         uint256 actualOut = finalToken - initToken;
         uint256 fee = (expectedOut * BUY_FEE) / 100;
@@ -163,15 +167,23 @@ contract ERC20SwapTaxTest is Test {
         assertEq(initEth - finalEth, amount);
         assertEq(actualOut, expectedOut - fee);
 
+        // invariant balances
         assertEq(finalTokenContractBal - initTokenContractBal, fee);
+        assertEq(finalToken - initToken, (initPairBal - finalPairBal) - fee);
+
+        // invariant supply
+        assertEq(taxToken.totalSupply(), totalSupply);
     }
 
     function testSwapSell(uint96 amount) public {
+        uint256 totalSupply = taxToken.totalSupply();
+
         taxToken.enableTrading();
         taxToken.removeLimits();
 
         uint256 initToken = taxToken.balanceOf(user);
         uint256 initContractBal = taxToken.balanceOf(address(taxToken));
+        uint256 initPairBal = taxToken.balanceOf(pair);
         uint256 initEth = user.balance;
         uint256 fee = (amount * BUY_FEE) / 100;
         uint256 inWithFee = amount - fee;
@@ -189,13 +201,22 @@ contract ERC20SwapTaxTest is Test {
         uint256 finalToken = taxToken.balanceOf(user);
         uint256 finalEth = user.balance;
         uint256 finalContractBal = taxToken.balanceOf(address(taxToken));
+        uint256 finalPairBal = taxToken.balanceOf(pair);
 
         assertEq(finalEth - initEth, expectedOut);
         assertEq(initToken - finalToken, amount);
+
+        // invariant balances
         assertEq(finalContractBal - initContractBal, fee);
+        assertEq((initToken - finalToken) - fee, finalPairBal - initPairBal);
+
+        // invariant supply
+        assertEq(taxToken.totalSupply(), totalSupply);
     }
 
     function testSwapSellWithSwap(uint96 amount) public {
+        uint256 totalSupply = taxToken.totalSupply();
+
         taxToken.enableTrading();
         taxToken.removeLimits();
 
@@ -210,11 +231,11 @@ contract ERC20SwapTaxTest is Test {
         );
 
         uint256 initToken = taxToken.balanceOf(user);
-
         uint256 initContractBal = taxToken.balanceOf(address(taxToken));
         uint256 initPoolBal = IERC20(pair).balanceOf(owner);
         uint256 initProtocolEth = taxToken.protocolWallet().balance;
         uint256 initOwnerEth = taxToken.teamWallet().balance;
+        uint256 initPairBal = taxToken.balanceOf(pair);
 
         uint256 toSwap = initContractBal <= taxToken.maxContractSwap() ? initContractBal : taxToken.maxContractSwap();
 
@@ -228,16 +249,23 @@ contract ERC20SwapTaxTest is Test {
 
         router.swapExactTokensForETHSupportingFeeOnTransferTokens(amount, 0, tokenToWeth, user, block.timestamp);
 
-        uint256 finalContractBal = taxToken.balanceOf(address(taxToken));
-        uint256 finalPoolBal = IERC20(pair).balanceOf(owner);
-        uint256 finalProtocolEth = taxToken.protocolWallet().balance;
-        uint256 finalOwnerEth = taxToken.teamWallet().balance;
+        // uint256 finalToken = taxToken.balanceOf(user);
+        // uint256 finalContractBal = taxToken.balanceOf(address(taxToken));
+        // uint256 finalPairBal = taxToken.balanceOf(pair);
 
-        assertGt(finalPoolBal, initPoolBal);
-        assertGt(finalProtocolEth, initProtocolEth);
-        assertGt(finalOwnerEth, initOwnerEth);
+        assertGt(taxToken.protocolWallet().balance, initProtocolEth);
+        assertGt(taxToken.teamWallet().balance, initOwnerEth);
+        assertGt(IERC20(pair).balanceOf(owner), initPoolBal);
 
-        assertEq(finalContractBal + toSwap, initContractBal + fee);
+        // invariant balances
+        assertEq(taxToken.balanceOf(pair) - initPairBal, amount + toSwap - fee);
+        assertEq(initToken - taxToken.balanceOf(user), amount);
+        fee > toSwap
+            ? assertEq(taxToken.balanceOf(address(taxToken)) - initContractBal, fee - toSwap)
+            : assertEq(initContractBal - taxToken.balanceOf(address(taxToken)), toSwap - fee);
+
+        // invariant supply
+        assertEq(taxToken.totalSupply(), totalSupply);
     }
 
     function testLimits() public {
