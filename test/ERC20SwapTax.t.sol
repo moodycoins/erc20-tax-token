@@ -214,7 +214,7 @@ contract ERC20SwapTaxTest is Test {
         uint256 initProtocolEth = taxToken.protocolWallet().balance;
         uint256 initOwnerEth = taxToken.teamWallet().balance;
 
-        uint256 toSwap = initContractBal <= taxToken.maxSwap() ? initContractBal : taxToken.maxSwap();
+        uint256 toSwap = initContractBal <= taxToken.maxContractSwap() ? initContractBal : taxToken.maxContractSwap();
 
         uint256 fee = (uint256(amount) * 3) / 100;
 

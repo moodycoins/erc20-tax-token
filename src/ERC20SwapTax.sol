@@ -19,11 +19,11 @@ import {IUniswapV2Factory} from "./interfaces/IUniswapV2Factory.sol";
 contract ERC20SwapTax is ERC20, Ownable {
     using Math for uint256;
 
-    uint256 constant MAX_SUPPLY = 10_000_000 * 1e18;
-    uint256 constant MAX_TAX = 5;
+    uint256 public constant MAX_SUPPLY = 10_000_000 * 1e18;
+    uint256 public constant MAX_TAX = 5;
 
-    address constant DEAD = address(0xdEaD);
-    address immutable WETH;
+    address internal constant DEAD = address(0xdEaD);
+    address internal immutable WETH;
 
     address public immutable uniswapV2Router;
     address public immutable uniswapV2Pair;
@@ -49,7 +49,7 @@ contract ERC20SwapTax is ERC20, Ownable {
     uint8 public teamFee;
 
     uint128 public swapThreshold;
-    uint128 public maxSwap;
+    uint128 public maxContractSwap;
 
     mapping(address => bool) public isAmm;
     mapping(address => bool) public isBlacklisted;
@@ -86,8 +86,8 @@ contract ERC20SwapTax is ERC20, Ownable {
         protocolWallet = _protocolWallet;
         teamWallet = owner();
 
-        if (_hasLimits) limitsActive = true;
-        if (_hasBlacklist) blacklistActive = true;
+        limitsActive = _hasLimits;
+        blacklistActive = _hasBlacklist;
 
         updateFees(_protocolFee, _liquidityFee, _teamFee);
 
@@ -106,10 +106,16 @@ contract ERC20SwapTax is ERC20, Ownable {
         excludeFromLimits(uniswapV2Pair, true);
         excludeFromLimits(uniswapV2Router, true);
 
-        maxTransaction = MAX_SUPPLY.mulDiv(1, 100); // 1%
-        maxWallet = MAX_SUPPLY.mulDiv(1, 100); // 1%
-        swapThreshold = uint128(MAX_SUPPLY.mulDiv(5, 10_000)); // 0.05%
-        maxSwap = uint128(MAX_SUPPLY.mulDiv(50, 10_000)); // 0.50%
+        // prettier-ignore
+        {
+            // default contract swap config
+            swapThreshold   = uint128(MAX_SUPPLY.mulDiv(5 , 10_000)); // 0.05%
+            maxContractSwap = uint128(MAX_SUPPLY.mulDiv(50, 10_000)); // 0.50%
+
+            // default limits
+            maxTransaction = MAX_SUPPLY.mulDiv(1, 100); // 1%
+            maxWallet      = MAX_SUPPLY.mulDiv(1, 100); // 1%
+        }
 
         excludeFromFees(DEAD, true);
         excludeFromLimits(DEAD, true);
@@ -125,7 +131,7 @@ contract ERC20SwapTax is ERC20, Ownable {
         emit Approval(address(this), uniswapV2Router, type(uint256).max);
 
         // only ever called once
-        _mint(msg.sender, MAX_SUPPLY); // 60%
+        _mint(msg.sender, MAX_SUPPLY);
     }
 
     /// @dev Once trading is active, can never be inactive
@@ -147,10 +153,10 @@ contract ERC20SwapTax is ERC20, Ownable {
     }
 
     /// @dev Update the max contract swap
-    function updateMaxSwap(uint128 newMaxSwap) external onlyOwner {
+    function updateMaxContractSwap(uint128 newMaxSwap) external onlyOwner {
         require(newMaxSwap >= (totalSupply * 1) / 100_000, "BSA"); // >= 0.001%
         require(newMaxSwap <= (totalSupply * 5) / 1000, "BSA"); // <= 0.5%
-        maxSwap = newMaxSwap;
+        maxContractSwap = newMaxSwap;
     }
 
     /// @dev Update the max transaction while limits are in effect
@@ -296,7 +302,7 @@ contract ERC20SwapTax is ERC20, Ownable {
         uint256 balance = balanceOf[address(this)];
 
         if (balance == 0) return;
-        if (balance > maxSwap) balance = maxSwap;
+        if (balance > maxContractSwap) balance = maxContractSwap;
 
         uint256 protocolTokens = balance.mulDiv(protocolFee, swapFee);
         uint256 teamTokens = balance.mulDiv(teamFee, swapFee);
