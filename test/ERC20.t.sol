@@ -3,7 +3,6 @@ pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 import "./mocks/MockERC20SwapTax.sol";
-import "./utils/DSInvariantTest.sol";
 
 contract ERC20Test is Test {
     MockERC20SwapTax token;
