@@ -11,6 +11,8 @@ import "../src/ERC20SwapTax.sol";
 contract ERC20SwapTaxTest is Test {
     uint256 mainnetFork;
 
+    address constant v2Router = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+
     ERC20SwapTax taxToken;
     IUniswapV2Router02 router;
     address pair;
@@ -38,7 +40,7 @@ contract ERC20SwapTaxTest is Test {
 
         owner = address(this);
 
-        taxToken = new ERC20SwapTax("TEST", "TEST", 1, 1, 1, address(protocolWallet), true, true);
+        taxToken = new ERC20SwapTax("Test Tax Token", "TEST", v2Router, protocolWallet, 1, 1, 1, true, true);
         router = IUniswapV2Router02(taxToken.uniswapV2Router());
         pair = taxToken.uniswapV2Pair();
         weth = IERC20(router.WETH());

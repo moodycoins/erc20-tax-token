@@ -12,8 +12,8 @@ import {IUniswapV2Factory} from "./interfaces/IUniswapV2Factory.sol";
 /// @notice A gas-optimized ERC20 token with taxable V2 swaps
 /// @dev Blacklist and wallet limits are enabled in the constructor
 /// @dev Rewards can be allocated to three locations:
-///   1. To the teamWallet
-///   2. To the protocolWallet
+///   1. The teamWallet
+///   2. The protocolWallet
 ///   3. Back into the LP
 /// You can choose the distribution to each in the constructor
 contract ERC20SwapTax is ERC20, Ownable {
@@ -31,9 +31,6 @@ contract ERC20SwapTax is ERC20, Ownable {
     address public protocolWallet;
     address public teamWallet;
 
-    uint256 public maxTransaction;
-    uint256 public maxWallet;
-
     bool private _swapping;
 
     bool public limitsActive = false;
@@ -48,8 +45,19 @@ contract ERC20SwapTax is ERC20, Ownable {
     uint8 public liquidityFee;
     uint8 public teamFee;
 
-    uint128 public swapThreshold;
-    uint128 public maxContractSwap;
+    // === Swap parameters ===
+    //
+    // swapThreshold: The min amount of tax tokens before the contract will swap
+    // maxContractSwap: The max amount of tokens the contract will swap at once
+    // maxTransaction: If limits are in effect, the max buy/sell at any given time
+    // maxWallet: If limits are in effect, the max wallet size
+    //
+    // Note: reasonable values have been chosen, edit them freely, but be wary of setting
+    // maxContractSwap or swapThreshold too high, as that can result in large contract sales
+    uint128 public swapThreshold   = uint128(MAX_SUPPLY.mulDiv(5  , 10_000)); // prettier-ignore
+    uint128 public maxContractSwap = uint128(MAX_SUPPLY.mulDiv(50 , 10_000)); // prettier-ignore
+    uint128 public maxTransaction  = uint128(MAX_SUPPLY.mulDiv(100, 10_000)); // prettier-ignore
+    uint128 public maxWallet       = uint128(MAX_SUPPLY.mulDiv(100, 10_000)); // prettier-ignore
 
     mapping(address => bool) public isAmm;
     mapping(address => bool) public isBlacklisted;
@@ -73,13 +81,15 @@ contract ERC20SwapTax is ERC20, Ownable {
     /// @param _protocolWallet The wallet to receive protocol fee portion
     /// @param _hasLimits Are there transaction and wallet limits in place
     /// @param _hasBlacklist Is there a blacklist for this token
+    /// @dev The sum of all the fees must be < MAX_FEE = 5
     constructor(
         string memory _name,
         string memory _symbol,
+        address _uniswapV2Router,
+        address _protocolWallet,
         uint8 _protocolFee,
         uint8 _liquidityFee,
         uint8 _teamFee,
-        address _protocolWallet,
         bool _hasLimits,
         bool _hasBlacklist
     ) ERC20(_name, _symbol, 18) {
@@ -91,31 +101,15 @@ contract ERC20SwapTax is ERC20, Ownable {
 
         updateFees(_protocolFee, _liquidityFee, _teamFee);
 
-        IUniswapV2Router02 router = IUniswapV2Router02(
-            // Uniswap V2 router address on Mainnet
-            // Must update this if necessary
-            0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
-        );
-
+        uniswapV2Router = _uniswapV2Router;
+        IUniswapV2Router02 router = IUniswapV2Router02(uniswapV2Router);
         WETH = router.WETH();
-        uniswapV2Router = address(router);
         uniswapV2Pair = IUniswapV2Factory(router.factory()).createPair(address(this), WETH);
 
         setAmm(uniswapV2Pair, true);
 
         excludeFromLimits(uniswapV2Pair, true);
         excludeFromLimits(uniswapV2Router, true);
-
-        // prettier-ignore
-        {
-            // default contract swap config
-            swapThreshold   = uint128(MAX_SUPPLY.mulDiv(5 , 10_000)); // 0.05%
-            maxContractSwap = uint128(MAX_SUPPLY.mulDiv(50, 10_000)); // 0.50%
-
-            // default limits
-            maxTransaction = MAX_SUPPLY.mulDiv(1, 100); // 1%
-            maxWallet      = MAX_SUPPLY.mulDiv(1, 100); // 1%
-        }
 
         excludeFromFees(DEAD, true);
         excludeFromLimits(DEAD, true);
@@ -160,15 +154,15 @@ contract ERC20SwapTax is ERC20, Ownable {
     }
 
     /// @dev Update the max transaction while limits are in effect
-    function updateMaxTxnAmount(uint256 newAmount) external onlyOwner {
-        require(newAmount >= ((totalSupply * 5) / 1000), "BMT"); // >= 0.5%
-        maxTransaction = newAmount;
+    function updateMaxTxAmount(uint128 newMaxTx) external onlyOwner {
+        require(newMaxTx >= ((totalSupply * 5) / 1000), "BMT"); // >= 0.5%
+        maxTransaction = newMaxTx;
     }
 
     /// @dev Update the max wallet while limits are in effect
-    function updateMaxWalletAmount(uint256 newAmount) external onlyOwner {
-        require(newAmount >= ((totalSupply * 1) / 100), "BMW"); // >= 1%
-        maxWallet = newAmount;
+    function updateMaxWalletAmount(uint128 newMaxWallet) external onlyOwner {
+        require(newMaxWallet >= ((totalSupply * 1) / 100), "BMW"); // >= 1%
+        maxWallet = newMaxWallet;
     }
 
     /// @dev Emergency disabling of contract sales
@@ -236,7 +230,7 @@ contract ERC20SwapTax is ERC20, Ownable {
         }
     }
 
-    /// @dev A gas-optimized internal _transfer tax function
+    /// @dev A gas-optimized internal _transfer function with a tax
     /// @dev If the tokens in this contract are over the threshold, they will be swapped
     /// @dev A fee is taken on buys and sells to an AMM
     function _transfer(address from, address to, uint256 amount) internal override {
@@ -260,7 +254,7 @@ contract ERC20SwapTax is ERC20, Ownable {
         bool isBuy = isAmm[from];
 
         if (isBuy || excluded || balanceOf[address(this)] < swapThreshold || !swapEnabled) {
-            // do nothing
+            // ...
         } else {
             _swapping = true;
             _swapBack();
@@ -279,21 +273,13 @@ contract ERC20SwapTax is ERC20, Ownable {
 
         uint256 fee = 0;
 
-        if (!(isBuy || isAmm[to]) || excluded) {
-            // do nothing
-        } else {
+        if ((isBuy || isAmm[to]) && !excluded) {
             fee = amount.mulDiv(_swapFee, 100);
-
-            unchecked {
-                balanceOf[address(this)] += fee;
-            }
+            unchecked { balanceOf[address(this)] += fee; } // prettier-ignore
             emit Transfer(from, address(this), fee);
         }
 
-        unchecked {
-            // no underflow since amount > fee always
-            balanceOf[to] += (amount - fee);
-        }
+        unchecked { balanceOf[to] += (amount - fee); } // prettier-ignore
         emit Transfer(from, to, amount - fee);
     }
 
