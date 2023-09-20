@@ -79,8 +79,8 @@ contract ERC20SwapTax is ERC20, Ownable {
     /// @param _liquidityFee The fee re-allocated into the LP
     /// @param _teamFee The fee allocated to the team
     /// @param _protocolWallet The wallet to receive protocol fee portion
-    /// @param _hasLimits Are there transaction and wallet limits in place
-    /// @param _hasBlacklist Is there a blacklist for this token
+    /// @param _limitsActive Are there transaction and wallet limits in place
+    /// @param _blacklistActive Is there a blacklist for this token
     /// @dev The sum of all the fees must be < MAX_FEE = 5
     constructor(
         string memory _name,
@@ -90,14 +90,14 @@ contract ERC20SwapTax is ERC20, Ownable {
         uint8 _protocolFee,
         uint8 _liquidityFee,
         uint8 _teamFee,
-        bool _hasLimits,
-        bool _hasBlacklist
+        bool _limitsActive,
+        bool _blacklistActive
     ) ERC20(_name, _symbol, 18) {
         protocolWallet = _protocolWallet;
         teamWallet = owner();
 
-        limitsActive = _hasLimits;
-        blacklistActive = _hasBlacklist;
+        limitsActive = _limitsActive;
+        blacklistActive = _blacklistActive;
 
         updateFees(_protocolFee, _liquidityFee, _teamFee);
 
