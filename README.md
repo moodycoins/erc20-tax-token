@@ -1,6 +1,6 @@
 # erc20-tax-token
 
-**Minimal** and **gas optimized** implementations of ERC20 swap taxable tokens.
+**Minimal** and **gas optimized** implementation of an ERC20 token with taxable swaps.
 
 ## ERC20TaxSwap
 
@@ -67,6 +67,8 @@ Add a `.env` file with a valid RPC endpoint as indicated in `.env.example`:
 ```txt
 MAINNET_RPC_URL = https://mainnet.infura.io/v3/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
+
+Then run:
 
 ```zsh
 forge install
