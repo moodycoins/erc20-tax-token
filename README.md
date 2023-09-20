@@ -18,6 +18,24 @@ ERC20TaxSwap - "Basic functionality for token that taxes swaps through a Uniswap
   - `liquidityFee` (distributed back into the LP)
 - The max the contract can swap at once is determined by the `maxContractSwap` variable
 
+### Deployment
+
+A test contract is deployed on Goerli to:
+
+```sol
+0x8CD907A8502258CD7bb959B0BDEe179255B132F3
+```
+
+The fee breakdown is:
+
+```sol
+teamFee = 1;
+protocolFee = 1;
+liquidityFee = 1;
+```
+
+You can try interacting with it on [Uniswap](https://app.uniswap.org/swap?outputCurrency=0x8CD907A8502258CD7bb959B0BDEe179255B132F3&chain=goerli). Make sure to set slippage greater than 3%.
+
 ### Configuration
 
 A blacklist and transaction limits can be enabled in the constructor with `limitsActive` and `blacklistActive` arguments. Furthermore, various configuration parameters have been set to reasonable values, but can be updated (**warning**: misconfiguring these variables can cause problems):
