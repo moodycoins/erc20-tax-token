@@ -1,0 +1,31 @@
+{
+  "name": "erc20-tax-token",
+  "license": "MIT",
+  "version": "1.0.0",
+  "description": "Minimal and gas optimized implementations of ERC20 swap tax schemes.",
+  "files": [
+    "src/**/*.sol"
+  ],
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MoodyCoins/erc20-tax-token.git"
+  },
+  "scripts": {
+    "install:all": "npm install && forge install",
+    "build": "forge build --extra-output-files abi",
+    "clean": "forge clean",
+    "build:clean": "npm run clean && npm run build",
+    "test": "forge test",
+    "snapshot": "forge snapshot",
+    "update": "npm run snapshot && npm run build && npm run flatten",
+    "diff": "forge snapshot --diff",
+    "flatten": "rm -rf flat; find src -type f -name '*.sol' -exec forge flatten '{}' -o 'flat/{}' \\;"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.2",
+    "prettier-plugin-solidity": "^1.1.3"
+  }
+}
