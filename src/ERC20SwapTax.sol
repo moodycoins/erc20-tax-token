@@ -21,7 +21,7 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
     using Math for uint256;
 
     uint8 public immutable MAX_TAX = 5;
-    uint256 public immutable initialSupply;
+    uint256 public immutable override initialSupply;
 
     address public immutable override v2Router;
     address public immutable override v2Pair;
@@ -92,12 +92,13 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
         WETH = IUniswapV2Router02(v2Router).WETH();
         v2Pair = IUniswapV2Factory(IUniswapV2Router02(v2Router).factory()).createPair(address(this), WETH);
 
-        // Note: reasonable values have been chosen, edit them freely, but be wary of setting
-        // maxContractSwap or swapThreshold too high, as that can result in large contract sales
-        swapThreshold   = uint128(initialSupply.mulDiv(5  , 10_000)); // prettier-ignore
-        maxContractSwap = uint128(initialSupply.mulDiv(50 , 10_000)); // prettier-ignore
-        maxTransaction  = uint128(initialSupply.mulDiv(100, 10_000)); // prettier-ignore
-        maxWallet       = uint128(initialSupply.mulDiv(100, 10_000)); // prettier-ignore
+        // Note: reasonable values have been chosen, edit them freely, but be wary of
+        // setting maxContractSwap or swapThreshold too high, as that can result in
+        // large contract sales
+        swapThreshold   = uint128(initialSupply.mulDiv(5  , 10_000));
+        maxContractSwap = uint128(initialSupply.mulDiv(50 , 10_000));
+        maxTransaction  = uint128(initialSupply.mulDiv(100, 10_000));
+        maxWallet       = uint128(initialSupply.mulDiv(100, 10_000));
 
         setAmm(v2Pair, true);
 
