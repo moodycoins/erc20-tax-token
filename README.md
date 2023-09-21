@@ -70,7 +70,7 @@ MAINNET_RPC_URL = https://mainnet.infura.io/v3/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 Then run:
 
-```bash
+```text
 forge install
 npm install
 npm run build
