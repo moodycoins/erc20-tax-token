@@ -8,8 +8,7 @@ contract MockERC20SwapTax is ERC20SwapTax {
     constructor(
         string memory _name,
         string memory _symbol
-    ) ERC20SwapTax(_name, _symbol, address(new MockV2Router()), address(0xBEEF), 1, 1, 1, false, false) {
-        _burn(msg.sender, MAX_SUPPLY);
+    ) ERC20SwapTax(_name, _symbol, 0, address(new MockV2Router()), address(0xBEEF), 1, 1, 1, false, false) {
     }
 
     function mint(address to, uint256 value) public virtual {

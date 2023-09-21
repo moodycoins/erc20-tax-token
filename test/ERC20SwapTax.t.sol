@@ -40,9 +40,9 @@ contract ERC20SwapTaxTest is Test {
 
         owner = address(this);
 
-        taxToken = new ERC20SwapTax("Test Tax Token", "TEST", v2Router, protocolWallet, 1, 1, 1, true, true);
-        router = IUniswapV2Router02(taxToken.uniswapV2Router());
-        pair = taxToken.uniswapV2Pair();
+        taxToken = new ERC20SwapTax("Test Tax Token", "TEST", 10_000_000 * 1e18, v2Router, protocolWallet, 1, 1, 1, true, true);
+        router = IUniswapV2Router02(taxToken.v2Router());
+        pair = taxToken.v2Pair();
         weth = IERC20(router.WETH());
 
         taxToken.approve(address(router), type(uint256).max);
@@ -270,8 +270,8 @@ contract ERC20SwapTaxTest is Test {
 
     function testLimits() public {
         assert(taxToken.limitsActive());
-        assert(!taxToken.tradingActive());
-        assert(!taxToken.swapEnabled());
+        assert(!taxToken.tradingEnabled());
+        assert(!taxToken.contractSwapEnabled());
 
         uint256 userBal = taxToken.balanceOf(user);
 
