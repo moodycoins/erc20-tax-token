@@ -17,7 +17,6 @@
     "install:all": "npm install && forge install",
     "build": "forge build --extra-output-files abi",
     "clean": "forge clean",
-    "lint": "prettier --write **.sol",
     "build:clean": "npm run clean && npm run build",
     "test": "forge test",
     "snapshot": "forge snapshot",
