@@ -2,13 +2,11 @@
 
 **Minimal** and **gas optimized** implementation of an ERC20 token with taxable swaps.
 
-## ERC20TaxSwap
-
 ```ml
 ERC20TaxSwap - "Basic functionality for token that taxes swaps through a UniswapV2 pair"
 ```
 
-### Features
+## Features
 
 - Taxes are taken on swaps to any router contracts
 - Taxes are accumulated in the contract until the contract balance `> swapThreshold`, at which point a swap to `$ETH` will be triggered during the next transfer or sale
@@ -18,7 +16,7 @@ ERC20TaxSwap - "Basic functionality for token that taxes swaps through a Uniswap
   - `liquidityFee` (distributed back into the LP)
 - The max the contract can swap at once is determined by the `maxContractSwap` variable
 
-### Installation
+## Installation
 
 To install with **Foundry**:
 
@@ -32,7 +30,7 @@ To install with **Hardhat** or **Truffle**:
 npm install erc20-tax-token
 ```
 
-### Try It
+## Try It
 
 A test contract is deployed on Goerli to:
 
@@ -50,7 +48,7 @@ liquidityFee = 1;
 
 You can try interacting with it on [Uniswap](https://app.uniswap.org/swap?outputCurrency=0x8CD907A8502258CD7bb959B0BDEe179255B132F3&chain=goerli). Make sure to set slippage greater than 3%.
 
-### Configuration
+## Configuration
 
 A blacklist and transaction limits can be enabled in the constructor with `limitsActive` and `blacklistActive` arguments. Furthermore, various configuration parameters have been set to reasonable values, but can be updated (**warning**: misconfiguring these variables can cause problems):
 
@@ -68,9 +66,11 @@ maxTransaction = initialSupply.mulDiv(100, 10000); // 1%
 maxWallet = initialSupply.mulDiv(100, 10000); // 1%
 ```
 
-#### Minting
+## Minting
 
-By default, the `initialSupply` is minted in the constructor and the token is no longer mintable. To change this, you would need write a new function utilizing the ERC20 `_mint(address to, uint amount)` function.
+By default, the `initialSupply` is minted in the constructor and the token is no longer mintable. To change this, you would need inherit the contract and write a new function utilizing the ERC20 `_mint(address to, uint amount)` function.
+
+By default, the contract uses a very optimized ERC20 implementation, and it is possible to cause issues by making direct changes to the `totalSupply` variable, so we strongly advise against this and instead encourage usage of `_mint(address to, uint amount)`.
 
 **Note**: It's recommended to keep `initialSupply` as a hard cap and base the mint schedule around this hard cap. This way parameters like `swapThreshold` can be based around the `initialSupply`, whereas a tax token with a completely unpredictable supply would be hard to configure.
 
