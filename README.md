@@ -3,7 +3,7 @@
 **Minimal** and **gas optimized** implementation of an ERC20 token with taxable swaps.
 
 ```ml
-ERC20TaxSwap - "Basic functionality for token that taxes swaps through a UniswapV2 pair"
+ERC20TaxSwap.sol - "Basic functionality for token that taxes swaps through a UniswapV2 pair"
 ```
 
 ## Features
