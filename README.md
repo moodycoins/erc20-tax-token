@@ -3,7 +3,7 @@
 **Minimal** and **gas optimized** implementation of an ERC20 token with taxable swaps.
 
 ```ml
-"ERC20TaxSwap.sol" - "Optimized and fully featured ERC20 that taxes token swaps"
+ERC20TaxSwap - "Optimized and fully featured ERC20 that taxes token swaps"
 ```
 
 ## Features
