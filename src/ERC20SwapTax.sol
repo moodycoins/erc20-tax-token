@@ -59,12 +59,14 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
     /// @dev Constructor
     /// @param _name The token name
     /// @param _symbol The token symbol
-    /// @param _protocolFee The fee allocated back to the protocol
+    /// @param _initialSupply The initial token supply
+    /// @param _v2Router The address of the main uniswap style V2 router
+    /// @param _protocolWallet The wallet to receive the protocolFee
+    /// @param _protocolFee The fee allocated to the protocol
     /// @param _liquidityFee The fee re-allocated into the LP
-    /// @param _teamFee The fee allocated to the team
-    /// @param _protocolWallet The wallet to receive protocol fee portion
-    /// @param _limitsActive Are there transaction and wallet limits in place
-    /// @param _blacklistActive Is there a blacklist for this token
+    /// @param _teamFee The fee re-allocated into the LP
+    /// @param _limitsActive Are limits on transaction and wallets sizes active
+    /// @param _blacklistActive Is the blacklist active
     /// @dev The sum of all the fees must be < MAX_FEE = 5
     constructor(
         string memory _name,
