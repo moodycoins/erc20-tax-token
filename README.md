@@ -40,7 +40,7 @@ You can try interacting with it on [Uniswap](https://app.uniswap.org/swap?output
 
 A blacklist and transaction limits can be enabled in the constructor with `limitsActive` and `blacklistActive` arguments. Furthermore, various configuration parameters have been set to reasonable values, but can be updated (**warning**: misconfiguring these variables can cause problems):
 
-```sol
+```solidity
 // The balance at which the contract attempts to swap to ETH
 swapThreshold = initialSupply.mulDiv(5, 10000); // 0.05%
 
