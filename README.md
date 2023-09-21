@@ -29,8 +29,8 @@ A test contract is deployed on Goerli to:
 The fee breakdown is:
 
 ```solidity
-teamFee = 1;
-protocolFee = 1;
+teamFee      = 1;
+protocolFee  = 1;
 liquidityFee = 1;
 ```
 
@@ -64,7 +64,7 @@ By default, the `initialSupply` is minted in the constructor and the token is no
 
 Add a `.env` file with a valid RPC endpoint as indicated in `.env.example`:
 
-```txt
+```text
 MAINNET_RPC_URL = https://mainnet.infura.io/v3/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
 
