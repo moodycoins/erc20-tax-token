@@ -18,7 +18,21 @@ ERC20TaxSwap - "Basic functionality for token that taxes swaps through a Uniswap
   - `liquidityFee` (distributed back into the LP)
 - The max the contract can swap at once is determined by the `maxContractSwap` variable
 
-### Deployment
+### Installation
+
+To install with **Foundry**:
+
+```text
+forge install moodycoins/erc20-tax-token
+```
+
+To install with **Hardhat** or **Truffle**:
+
+```text
+npm install erc20-tax-token
+```
+
+### Try It
 
 A test contract is deployed on Goerli to:
 
