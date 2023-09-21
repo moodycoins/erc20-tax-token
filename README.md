@@ -23,7 +23,7 @@ ERC20TaxSwap - "Basic functionality for token that taxes swaps through a Uniswap
 A test contract is deployed on Goerli to:
 
 ```sol
-0x8CD907A8502258CD7bb959B0BDEe179255B132F3
+testDeploymentAddress = 0x8CD907A8502258CD7bb959B0BDEe179255B132F3
 ```
 
 The fee breakdown is:
@@ -42,23 +42,23 @@ A blacklist and transaction limits can be enabled in the constructor with `limit
 
 ```sol
 // The balance at which the contract attempts to swap to ETH
-swapThreshold = MAX_SUPPLY.mulDiv(5, 10000); // 0.05%
+swapThreshold = initialSupply.mulDiv(5, 10000); // 0.05%
 
 // The max that can be swapped at once
-maxContractSwap = MAX_SUPPLY.mulDiv(50, 10000); // 0.5%
+maxContractSwap = initialSupply.mulDiv(50, 10000); // 0.5%
 
 // If limits are active, the max size of a buy or sell
-maxTransaction = MAX_SUPPLY.mulDiv(100, 10000); // 1%
+maxTransaction = initialSupply.mulDiv(100, 10000); // 1%
 
 // If limits are active, the max wallet size
-maxWallet = MAX_SUPPLY.mulDiv(100, 10000); // 1%
+maxWallet = initialSupply.mulDiv(100, 10000); // 1%
 ```
 
 #### Minting
 
-By default, the `MAX_SUPPLY` is minted in the constructor and the token is no longer mintable. To change this, you would need write a new function utilizing the ERC20 `_mint(address to, uint amount)` function.
+By default, the `initialSupply` is minted in the constructor and the token is no longer mintable. To change this, you would need write a new function utilizing the ERC20 `_mint(address to, uint amount)` function.
 
-**Note**: It's recommended to keep `MAX_SUPPLY` as a hard cap and base the mint schedule around this hard cap. This way parameters like `swapThreshold` can be based around the `MAX_SUPPLY`, whereas a tax token with a completely unpredictable supply would be hard to configure.
+**Note**: It's recommended to keep `initialSupply` as a hard cap and base the mint schedule around this hard cap. This way parameters like `swapThreshold` can be based around the `initialSupply`, whereas a tax token with a completely unpredictable supply would be hard to configure.
 
 ## Testing
 
