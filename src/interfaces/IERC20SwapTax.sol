@@ -24,8 +24,6 @@ pragma solidity ^0.8.20;
 // which would fill the contract balance with lots of taxes to be sold, which would
 // put significant sell pressure on your token.
 
-// prettier-ignore
-
 interface IERC20SwapTax {
     // immutables
     function v2Router() external view returns (address);
