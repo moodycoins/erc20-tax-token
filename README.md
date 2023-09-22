@@ -35,7 +35,7 @@ npm install erc20-tax-token
 A test contract is deployed on Goerli to:
 
 ```solidity
-0x8CD907A8502258CD7bb959B0BDEe179255B132F3
+0x12308bCA3fadFBe6c8154d591cDfE5Df96eAB4Bb
 ```
 
 The fee breakdown is:
@@ -46,7 +46,7 @@ protocolFee  = 1;
 liquidityFee = 1;
 ```
 
-You can try interacting with it on [Uniswap](https://app.uniswap.org/swap?outputCurrency=0x8CD907A8502258CD7bb959B0BDEe179255B132F3&chain=goerli). Make sure to set slippage greater than 3%.
+You can try interacting with it on [Uniswap](https://app.uniswap.org/swap?outputCurrency=0x12308bCA3fadFBe6c8154d591cDfE5Df96eAB4Bb&chain=goerli). Make sure to set slippage greater than 3%.
 
 ## Configuration
 
