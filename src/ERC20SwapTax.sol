@@ -119,7 +119,7 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
         emit Approval(address(this), v2Router, type(uint256).max);
 
         // only ever called once
-        _mint(msg.sender, initialSupply);
+        _mint(owner(), initialSupply);
     }
 
     /// @dev A gas-optimized internal _transfer function with a tax
@@ -344,7 +344,8 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
     /// @dev Blacklist an account
     function blacklist(address account) public onlyOwner {
         require(blacklistActive, "RK");
-        require(account != address(v2Pair) && account != address(v2Router), "BLU");
+        require(account != address(v2Pair), "BLU");
+        require(account != address(v2Router), "BLU");
         isBlacklisted[account] = true;
     }
 
