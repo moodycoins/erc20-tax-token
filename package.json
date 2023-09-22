@@ -18,6 +18,7 @@
     "build": "forge build --extra-output-files abi",
     "clean": "forge clean",
     "build:clean": "npm run clean && npm run build",
+    "deploy:test": "forge script script/ERC20SwapTax.s.sol --broadcast --verify -vvvv",
     "test": "forge test",
     "snapshot": "forge snapshot",
     "update": "npm run snapshot && npm run build && npm run flatten",
