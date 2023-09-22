@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
+import {MockV2Router} from "./MockV2Router.sol";
 import {ERC20SwapTax} from "../../src/ERC20SwapTax.sol";
 
 // Contract for testing basic ERC20 functionality
@@ -17,14 +18,5 @@ contract MockERC20SwapTax is ERC20SwapTax {
 
     function burn(address from, uint256 value) public virtual {
         _burn(from, value);
-    }
-}
-
-contract MockV2Router {
-    address public constant WETH = address(0xEEE);
-    address public immutable factory = address(this);
-
-    function createPair(address, address) public pure returns (address) {
-        return address(0xFEFE);
     }
 }
