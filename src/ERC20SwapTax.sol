@@ -102,7 +102,7 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
         maxTransaction  = uint128(initialSupply.mulDiv(100, 10_000));
         maxWallet       = uint128(initialSupply.mulDiv(100, 10_000));
 
-        setAmm(v2Pair, true);
+        updateAmm(v2Pair, true);
 
         excludeFromLimits(address(this), true);
         excludeFromLimits(owner(), true);
@@ -120,108 +120,6 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
 
         // only ever called once
         _mint(msg.sender, initialSupply);
-    }
-
-    /// @dev Once trading is active, can never be inactive
-    function enableTrading() external onlyOwner {
-        tradingEnabled = true;
-        contractSwapEnabled = true;
-    }
-
-    /// @dev Irreversible action, limits can never be reinstated
-    function removeLimits() external onlyOwner {
-        limitsActive = false;
-    }
-
-    /// @dev Update the threshold for contract swaps
-    function updateSwapThreshold(uint128 newThreshold) external onlyOwner {
-        require(newThreshold >= (totalSupply * 1) / 1_000_000, "BST"); // >= 0.0001%
-        require(newThreshold <= (totalSupply * 5) / 10_000, "BST"); // <= 0.05%
-        swapThreshold = newThreshold;
-    }
-
-    /// @dev Update the max contract swap
-    function updateMaxContractSwap(uint128 newMaxSwap) external onlyOwner {
-        require(newMaxSwap >= (totalSupply * 1) / 100_000, "BMS"); // >= 0.001%
-        require(newMaxSwap <= (totalSupply * 5) / 1000, "BMS"); // <= 0.5%
-        maxContractSwap = newMaxSwap;
-    }
-
-    /// @dev Update the max transaction while limits are in effect
-    function updateMaxTxAmount(uint128 newMaxTx) external onlyOwner {
-        require(newMaxTx >= ((totalSupply * 5) / 1000), "BMT"); // >= 0.5%
-        maxTransaction = newMaxTx;
-    }
-
-    /// @dev Update the max wallet while limits are in effect
-    function updateMaxWalletAmount(uint128 newMaxWallet) external onlyOwner {
-        require(newMaxWallet >= ((totalSupply * 1) / 100), "BMW"); // >= 1%
-        maxWallet = newMaxWallet;
-    }
-
-    /// @dev Emergency disabling of contract sales
-    function updateContractSwapEnabled(bool enabled) external onlyOwner {
-        contractSwapEnabled = enabled;
-    }
-
-    /// @dev Update the swap fees
-    function updateFees(uint8 _protocolFee, uint8 _liquidityFee, uint8 _teamFee) public onlyOwner {
-        require((totalSwapFee = _protocolFee + _liquidityFee + _teamFee) <= MAX_TAX, "BF");
-        protocolFee = _protocolFee;
-        liquidityFee = _liquidityFee;
-        teamFee = _teamFee;
-    }
-
-    /// @dev Exclude account from the limited max transaction size
-    function excludeFromLimits(address account, bool excluded) public onlyOwner {
-        isExcludedFromLimits[account] = excluded;
-    }
-
-    /// @dev Exclude account from all fees
-    function excludeFromFees(address account, bool excluded) public onlyOwner {
-        isExcludedFromFees[account] = excluded;
-        emit ExcludeFromFees(account, excluded);
-    }
-
-    /// @dev Designate address as an AMM pair to process fees
-    function setAmm(address account, bool amm) public onlyOwner {
-        if (!amm) require(account != v2Pair, "FP");
-        isAmm[account] = amm;
-        emit AmmUpdated(account, amm);
-    }
-
-    /// @dev Update the protocol wallet
-    function updateProtocolWallet(address newWallet) external onlyOwner {
-        emit ProtocolWalletUpdated(newWallet, protocolWallet);
-        protocolWallet = newWallet;
-    }
-
-    /// @dev Update the team wallet
-    function updateTeamWallet(address newWallet) external onlyOwner {
-        emit TeamWalletUpdated(newWallet, teamWallet);
-        teamWallet = newWallet;
-    }
-
-    /// @dev Check various conditions if limits are in effect
-    function _checkLimits(address from, address to, uint256 amount) internal view {
-        if (from == owner() || to == owner() || to == DEAD || _swapping) return;
-
-        if (!tradingEnabled) {
-            require(isExcludedFromFees[from] || isExcludedFromFees[to], "TC");
-        }
-        // buy
-        if (isAmm[from] && !isExcludedFromLimits[to]) {
-            require(amount <= maxTransaction, "MAX_TX");
-            require(amount + balanceOf[to] <= maxWallet, "MAX_WALLET");
-        }
-        // sell
-        else if (isAmm[to] && !isExcludedFromLimits[from]) {
-            require(amount <= maxTransaction, "MAX_TX");
-        }
-        // transfer
-        else if (!isExcludedFromLimits[to]) {
-            require(amount + balanceOf[to] <= maxWallet, "MAX_WALLET");
-        }
     }
 
     /// @dev A gas-optimized internal _transfer function with a tax
@@ -253,16 +151,13 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
             _swapping = false;
         }
 
-        // instead of 4 state modifications, do 3 while
-        // keeping the balances invariant:
+        // keep the sum of balances invariant:
         //
         // balance[from] -= amount;
         // balanceOf[this] += fee;
         // balanceOf[to] += amount - fee;
 
-        // take whole amount
         balanceOf[from] -= amount;
-
         uint256 fee = 0;
 
         if ((isBuy || isAmm[to]) && !excluded) {
@@ -273,6 +168,28 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
 
         unchecked { balanceOf[to] += (amount - fee); } // prettier-ignore
         emit Transfer(from, to, amount - fee);
+    }
+
+    /// @dev Check various conditions if limits are in effect
+    function _checkLimits(address from, address to, uint256 amount) internal view {
+        if (from == owner() || to == owner() || to == DEAD || _swapping) return;
+
+        if (!tradingEnabled) {
+            require(isExcludedFromFees[from] || isExcludedFromFees[to], "TC");
+        }
+        // buy
+        if (isAmm[from] && !isExcludedFromLimits[to]) {
+            require(amount <= maxTransaction, "MAX_TX");
+            require(amount + balanceOf[to] <= maxWallet, "MAX_WALLET");
+        }
+        // sell
+        else if (isAmm[to] && !isExcludedFromLimits[from]) {
+            require(amount <= maxTransaction, "MAX_TX");
+        }
+        // transfer
+        else if (!isExcludedFromLimits[to]) {
+            require(amount + balanceOf[to] <= maxWallet, "MAX_WALLET");
+        }
     }
 
     /// @dev Swap contract balance to ETH if over the threshold
@@ -336,6 +253,82 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
         );
     }
 
+    /// @dev Once trading is active, can never be inactive
+    function enableTrading() external onlyOwner {
+        tradingEnabled = true;
+        contractSwapEnabled = true;
+    }
+
+    /// @dev Update the threshold for contract swaps
+    function updateSwapThreshold(uint128 newThreshold) external onlyOwner {
+        require(newThreshold >= totalSupply.mulDiv(1, 1_000_000), "BST"); // >= 0.0001%
+        require(newThreshold <= totalSupply.mulDiv(5, 10_000), "BST"); // <= 0.05%
+        swapThreshold = newThreshold;
+    }
+
+    /// @dev Update the max contract swap
+    function updateMaxContractSwap(uint128 newMaxSwap) external onlyOwner {
+        require(newMaxSwap >=  totalSupply.mulDiv(1, 100_000), "BMS"); // >= 0.001%
+        require(newMaxSwap <= totalSupply.mulDiv(50, 10_000), "BMS"); // <= 0.5%
+        maxContractSwap = newMaxSwap;
+    }
+
+    /// @dev Update the max transaction while limits are in effect
+    function updateMaxTransaction(uint128 newMaxTx) external onlyOwner {
+        require(newMaxTx >= totalSupply.mulDiv(50, 10_000), "BMT"); // >= 0.5%
+        maxTransaction = newMaxTx;
+    }
+
+    /// @dev Update the max wallet while limits are in effect
+    function updateMaxWallet(uint128 newMaxWallet) external onlyOwner {
+        require(newMaxWallet >= totalSupply.mulDiv(100, 10_000), "BMW"); // >= 1%
+        maxWallet = newMaxWallet;
+    }
+
+    /// @dev Emergency disabling of contract sales
+    function updateContractSwapEnabled(bool enabled) external onlyOwner {
+        contractSwapEnabled = enabled;
+    }
+
+    /// @dev Update the swap fees
+    function updateFees(uint8 _protocolFee, uint8 _liquidityFee, uint8 _teamFee) public onlyOwner {
+        require(_protocolFee + _liquidityFee + _teamFee <= MAX_TAX, "BF");
+        totalSwapFee = _protocolFee + _liquidityFee + _teamFee;
+        protocolFee = _protocolFee;
+        liquidityFee = _liquidityFee;
+        teamFee = _teamFee;
+    }
+
+    /// @dev Exclude account from the limited max transaction size
+    function excludeFromLimits(address account, bool excluded) public onlyOwner {
+        isExcludedFromLimits[account] = excluded;
+    }
+
+    /// @dev Exclude account from all fees
+    function excludeFromFees(address account, bool excluded) public onlyOwner {
+        isExcludedFromFees[account] = excluded;
+        emit ExcludeFromFees(account, excluded);
+    }
+
+    /// @dev Designate address as an AMM pair to process fees
+    function updateAmm(address account, bool amm) public onlyOwner {
+        if (!amm) require(account != v2Pair, "FP");
+        isAmm[account] = amm;
+        emit AmmUpdated(account, amm);
+    }
+
+    /// @dev Update the protocol wallet
+    function updateProtocolWallet(address newWallet) external onlyOwner {
+        emit ProtocolWalletUpdated(newWallet, protocolWallet);
+        protocolWallet = newWallet;
+    }
+
+    /// @dev Update the team wallet
+    function updateTeamWallet(address newWallet) external onlyOwner {
+        emit TeamWalletUpdated(newWallet, teamWallet);
+        teamWallet = newWallet;
+    }
+
     /// @dev Withdraw token stuck in the contract
     function sweepToken(address token, address to) external onlyOwner {
         require(token != address(0), "ZA");
@@ -361,8 +354,13 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
         isBlacklisted[account] = false;
     }
 
+    /// @dev Irreversible action, limits can never be reinstated
+    function deactivateLimits() external onlyOwner {
+        limitsActive = false;
+    }
+
     /// @dev Renounce blacklist authority
-    function renounceBlacklist() public onlyOwner {
+    function deactivateBlacklist() public onlyOwner {
         blacklistActive = false;
     }
 }
