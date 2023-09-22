@@ -190,7 +190,9 @@ contract ERC20SwapTaxTest is Test {
         uint256 fee = (amount * BUY_FEE) / 100;
         uint256 inWithFee = amount - fee;
 
-        vm.assume(amount > 0.001 ether && amount < initToken);
+        vm.assume(amount > 0.00001 ether);
+        
+        if (amount > initToken) return;
 
         uint256 expectedOut = router.getAmountOut(inWithFee, token.balanceOf(pair), weth.balanceOf(pair));
 
@@ -245,7 +247,9 @@ contract ERC20SwapTaxTest is Test {
 
         assertGt(toSwap, 0);
 
-        vm.assume(amount > 0.001 ether && amount < initToken);
+        vm.assume(amount > 0.00001 ether);
+
+        if (amount > initToken) return;
 
         token.approve(address(router), type(uint256).max);
 
