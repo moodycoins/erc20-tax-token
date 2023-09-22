@@ -2,5 +2,8 @@
 solc = '0.8.20'
 libs = ['lib']
 optimizer = true
-optimizer_runs = 10000000
+optimizer_runs = 10_000_000
 verbosity = 2
+
+[profile.intense.fuzz]
+runs = 100_000
