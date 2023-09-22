@@ -14,7 +14,7 @@ contract DeployTestnet is Script {
         new ERC20SwapTax(
             "ERC20 Tax Token",
             "TAX",
-            5_000_000,
+            5_000_000 * 1e18,
             0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
             msg.sender,
             1,
