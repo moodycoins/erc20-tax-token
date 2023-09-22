@@ -2,6 +2,11 @@
 cache/
 out/
 
+# Script
+!/broadcast
+/broadcast/*/5/
+/broadcast/**/dry-run/
+
 # Flat
 flat/
 
