@@ -41,9 +41,9 @@ A test contract is deployed on Goerli to:
 The fee breakdown is:
 
 ```solidity
-teamFee      = 1;
-protocolFee  = 1;
-liquidityFee = 1;
+teamFee      = 1; // 1%
+protocolFee  = 1; // 1%
+liquidityFee = 1; // 1%
 ```
 
 You can try interacting with it on [Uniswap](https://app.uniswap.org/swap?outputCurrency=0x12308bCA3fadFBe6c8154d591cDfE5Df96eAB4Bb&chain=goerli). Make sure to set slippage greater than 3%.
