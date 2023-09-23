@@ -22,36 +22,62 @@ pragma solidity ^0.8.20;
 /// @title ERC20 Swap Tax Interface
 /// @notice An ERC20 Swap Tax token takes a fee from all token swaps
 interface IERC20SwapTax {
+
     // immutables
+
+    /// @notice The main v2 router address
     function v2Router() external view returns (address);
+    /// @notice The main v2 pair address
     function v2Pair() external view returns (address);
+    /// @notice The initial token supply
     function initialSupply() external view returns (uint256);
 
     // fees
-    function totalSwapFee() external view returns (uint8);
-    function protocolFee() external view returns (uint8);
-    function liquidityFee() external view returns (uint8);
-    function teamFee() external view returns (uint8);
 
+    /// @notice The total tax taken on swaps in percent
+    function totalSwapFee() external view returns (uint8);
+    /// @notice The protocol tax allocation in percent
+    function protocolFee() external view returns (uint8);
+    /// @notice The liquidity pool tax allocation in percent
+    function liquidityFee() external view returns (uint8);
+    /// @notice The team tax allocation in percent
+    function teamFee() external view returns (uint8);
+    /// @notice The address to collect the team fee
     function teamWallet() external view returns (address);
+    /// @notice The address to collect the protocol fee
     function protocolWallet() external view returns (address);
 
     // params
+
+    /// @notice The minimum amount of token that the contract will swap
     function swapThreshold() external view returns (uint128);
+    /// @notice The maximum amount of token that the contract will swap
     function maxContractSwap() external view returns (uint128);
+    /// @notice If limits are active, the max swap amount
     function maxTransaction() external view returns (uint128);
+    /// @notice If limits are active, the max wallet size
     function maxWallet() external view returns (uint128);
 
     // state
+
+    /// @notice If limits are active
     function limitsActive() external view returns (bool);
+    /// @notice If the blacklist is active
     function blacklistActive() external view returns (bool);
+    /// @notice If trading through the v2Pair is enabled
     function tradingEnabled() external view returns (bool);
+    /// @notice If the contract is allowed to swap
     function contractSwapEnabled() external view returns (bool);
 
     // addresses
+
+    /// @notice Is the address an automated market-maker pair
     function isAmm(address) external view returns (bool);
-    function isBlacklisted(address) external view returns (bool);
+    /// @notice Is the address excluded from tax fees
     function isExcludedFromFees(address) external view returns (bool);
+    /// @notice Is the address blacklisted
+    function isBlacklisted(address) external view returns (bool);
+    /// @notice Is the address excluded from limits
     function isExcludedFromLimits(address) external view returns (bool);
 
     // events
