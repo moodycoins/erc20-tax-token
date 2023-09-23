@@ -1,9 +1,13 @@
 # erc20-tax-token
 
-**Minimal** and **gas optimized** implementation of an ERC20 token with taxable swaps.
+**Minimal** and **gas optimized** implementations of an ERC20 token with taxable swaps.
+
+## Contracts
 
 ```ml
-ERC20TaxSwap - "Optimized and fully featured ERC20 that taxes token swaps"
+tokens
+├─ ERC20SwapTax — "Optimized and fully featured ERC20 with taxes token swaps"
+├─ ERC20SwapTaxMintable — "Mintable ERC20SwapTax implementation"
 ```
 
 ## Features
@@ -68,11 +72,9 @@ maxWallet = initialSupply.mulDiv(100, 10000); // 1%
 
 ## Minting
 
-By default, the `initialSupply` is minted in the constructor and the token is no longer mintable. To change this, you would need inherit the contract and write a new function utilizing the ERC20 `_mint(address to, uint amount)` function.
+Use the extension contract `ERC20SwapTaxMintable.sol` which exposes the `mintTo()` function. You can choose whether or not to set a `maxSupply` in the constructor, which will put a hard-cap on minting.
 
-By default, the contract uses a very optimized ERC20 implementation, and it is possible to cause issues by making direct changes to the `totalSupply` variable, so we strongly advise against this and instead encourage usage of `_mint(address to, uint amount)`.
-
-**Note**: It's recommended to keep `initialSupply` as a hard cap and base the mint schedule around this hard cap. This way parameters like `swapThreshold` can be based around the `initialSupply`, whereas a tax token with a completely unpredictable supply would be hard to configure.
+**Note**: Changing the `totalSupply` by large amounts can result in variables like `swapThreshold` becoming invalid. Be sure the keep this in mind!
 
 ## Testing
 
