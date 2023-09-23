@@ -66,21 +66,26 @@ contract ERC20SwapTaxTest is Test {
         tokenToWeth.push(address(token));
         tokenToWeth.push(address(weth));
 
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 1 ether}(
-            0,
-            wethToToken,
-            owner,
-            block.timestamp
-        );
-
+        _swapToToken(1 ether, owner);
         token.transfer(user, token.balanceOf(owner));
     }
 
+    function _swapToToken(uint256 ethToSwap, address to) internal {
+        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: ethToSwap}(
+            0,
+            wethToToken,
+            to,
+            block.timestamp
+        );
+    }
+
+    function _swapToEth(uint256 tokenToSwap, address to) internal {
+        router.swapExactTokensForETHSupportingFeeOnTransferTokens(tokenToSwap, 0, tokenToWeth, to, block.timestamp);
+    }
+
     function testSetUp() public {
-        uint256 totalSupply = token.totalSupply();
-        uint256 userBal = token.balanceOf(user);
-        assertEq(totalSupply, initialSupply);
-        assertGt(userBal, 0);
+        assertEq(token.totalSupply(), initialSupply);
+        assertGt(token.balanceOf(user), 0);
     }
 
     function test_GAS_swapBuy() public {
@@ -88,13 +93,7 @@ contract ERC20SwapTaxTest is Test {
         token.deactivateLimits();
 
         vm.startPrank(user);
-
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 1 ether}(
-            0,
-            wethToToken,
-            user,
-            block.timestamp
-        );
+        _swapToToken(1 ether, user);
     }
 
     function test_GAS_swapSell() public {
@@ -102,16 +101,8 @@ contract ERC20SwapTaxTest is Test {
         token.deactivateLimits();
 
         vm.startPrank(user);
-
         token.approve(address(router), type(uint256).max);
-
-        router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            token.balanceOf(user),
-            0,
-            tokenToWeth,
-            user,
-            block.timestamp
-        );
+        _swapToEth(token.balanceOf(user), user);
     }
 
     function test_GAS_swapSellWithSwap() public {
@@ -119,100 +110,72 @@ contract ERC20SwapTaxTest is Test {
         token.deactivateLimits();
 
         vm.startPrank(user);
-
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 5 ether}(
-            0,
-            wethToToken,
-            user,
-            block.timestamp
-        );
+        _swapToToken(5 ether, user);
 
         token.approve(address(router), type(uint256).max);
-
-        router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            token.balanceOf(user),
-            0,
-            tokenToWeth,
-            user,
-            block.timestamp
-        );
+        _swapToEth(token.balanceOf(user), user);
     }
 
-    function testSwapBuy(uint96 amount) public {
-        vm.assume(amount > 0 ether);
+    function testSwapBuy(uint96 ethBuy) public {
+        vm.assume(ethBuy > 0 ether);
+        deal(user, ethBuy);
 
         uint256 totalSupply = token.totalSupply();
 
         token.enableTrading();
         token.deactivateLimits();
-
-        deal(user, amount);
-        vm.startPrank(user);
 
         uint256 initToken = token.balanceOf(user);
         uint256 initEth = user.balance;
         uint256 initTokenContractBal = token.balanceOf(address(token));
         uint256 initPairBal = token.balanceOf(pair);
 
-        uint256 expectedOut = router.getAmountOut(amount, weth.balanceOf(pair), token.balanceOf(pair));
+        uint256 expectedOut = router.getAmountOut(ethBuy, weth.balanceOf(pair), token.balanceOf(pair));
 
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: amount}(0, wethToToken, user, block.timestamp);
+        vm.prank(user);
+        _swapToToken(ethBuy, user);
 
-        uint256 finalToken = token.balanceOf(user);
-        uint256 finalEth = user.balance;
-        uint256 finalTokenContractBal = token.balanceOf(address(token));
-        uint256 finalPairBal = token.balanceOf(pair);
-
-        uint256 actualOut = finalToken - initToken;
+        uint256 actualOut = token.balanceOf(user) - initToken;
         uint256 fee = (expectedOut * BUY_FEE) / 100;
 
-        assertEq(initEth - finalEth, amount);
+        assertEq(initEth - user.balance, ethBuy);
         assertEq(actualOut, expectedOut - fee);
 
         // invariant balances
-        assertEq(finalTokenContractBal - initTokenContractBal, fee);
-        assertEq(finalToken - initToken, (initPairBal - finalPairBal) - fee);
+        assertEq(token.balanceOf(address(token)) - initTokenContractBal, fee);
+        assertEq(actualOut, (initPairBal - token.balanceOf(pair)) - fee);
 
         // invariant supply
         assertEq(token.totalSupply(), totalSupply);
     }
 
-    function testSwapSell(uint96 amount) public {
-        uint256 totalSupply = token.totalSupply();
+    function testSwapSell(uint96 tokenSellAmount) public {
+        vm.assume(tokenSellAmount > 0.00001 * 1e18);
+        if (tokenSellAmount > token.balanceOf(user)) return;
 
         token.enableTrading();
         token.deactivateLimits();
 
+        uint256 totalSupply = token.totalSupply();
         uint256 initToken = token.balanceOf(user);
         uint256 initContractBal = token.balanceOf(address(token));
         uint256 initPairBal = token.balanceOf(pair);
         uint256 initEth = user.balance;
-        uint256 fee = (amount * BUY_FEE) / 100;
-        uint256 inWithFee = amount - fee;
-
-        vm.assume(amount > 0.00001 ether);
-        
-        if (amount > initToken) return;
-
-        uint256 expectedOut = router.getAmountOut(inWithFee, token.balanceOf(pair), weth.balanceOf(pair));
+        uint256 fee = (tokenSellAmount * BUY_FEE) / 100;
+        uint256 expectedOut = router.getAmountOut(tokenSellAmount - fee, token.balanceOf(pair), weth.balanceOf(pair));
 
         vm.startPrank(user);
-
         token.approve(address(router), type(uint256).max);
-
-        router.swapExactTokensForETHSupportingFeeOnTransferTokens(amount, 0, tokenToWeth, user, block.timestamp);
+        _swapToEth(tokenSellAmount, user);
 
         uint256 finalToken = token.balanceOf(user);
-        uint256 finalEth = user.balance;
-        uint256 finalContractBal = token.balanceOf(address(token));
-        uint256 finalPairBal = token.balanceOf(pair);
 
-        assertEq(finalEth - initEth, expectedOut);
-        assertEq(initToken - finalToken, amount);
+        assertEq(user.balance - initEth, expectedOut);
+        assertEq(initToken - finalToken, tokenSellAmount);
 
         // invariant balances
-        assertEq(finalContractBal - initContractBal, fee);
-        assertEq((initToken - finalToken) - fee, finalPairBal - initPairBal);
+        assertEq(token.balanceOf(address(token)) - initContractBal, fee);
+        assertEq((initToken - finalToken) - fee, token.balanceOf(pair) - initPairBal);
 
         // invariant supply
         assertEq(token.totalSupply(), totalSupply);
@@ -225,14 +188,9 @@ contract ERC20SwapTaxTest is Test {
         token.deactivateLimits();
 
         deal(user, 100 ether);
-        vm.startPrank(user);
 
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 5 ether}(
-            0,
-            wethToToken,
-            user,
-            block.timestamp
-        );
+        vm.startPrank(user);
+        _swapToToken(5 ether, user);
 
         uint256 initToken = token.balanceOf(user);
         uint256 initContractBal = token.balanceOf(address(token));
@@ -276,11 +234,7 @@ contract ERC20SwapTaxTest is Test {
         assert(!token.contractSwapEnabled());
 
         uint256 userBal = token.balanceOf(user);
-
-        uint256 maxWallet = token.maxWallet();
-        uint256 maxTx = token.maxTransaction();
-
-        assertGt(userBal, maxWallet);
+        assertGt(userBal, token.maxWallet());
 
         // no trading
         vm.expectRevert(bytes("TC"));
@@ -298,6 +252,7 @@ contract ERC20SwapTaxTest is Test {
         uint256 expectedOutBig = router.getAmountOut(10 ether, weth.balanceOf(pair), token.balanceOf(pair));
         uint256 expectedOutSmall = router.getAmountOut(0.001 ether, weth.balanceOf(pair), token.balanceOf(pair));
 
+        uint256 maxTx = token.maxTransaction();
         assertGt(expectedOutBig, maxTx);
         assertLt(expectedOutSmall, maxTx);
 
@@ -307,22 +262,12 @@ contract ERC20SwapTaxTest is Test {
         // fails because MAX_TX
         vm.expectRevert(bytes("UniswapV2: TRANSFER_FAILED"));
         vm.prank(user);
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 10 ether}(
-            0,
-            wethToToken,
-            user,
-            block.timestamp
-        );
+        _swapToToken(10 ether, user);
 
         // fails because MAX_WALLET - buy
         vm.expectRevert(bytes("UniswapV2: TRANSFER_FAILED"));
         vm.prank(user);
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 0.001 ether}(
-            0,
-            wethToToken,
-            user,
-            block.timestamp
-        );
+        _swapToToken(0.001 ether, user);
 
         vm.prank(user);
         token.approve(address(router), type(uint256).max);
@@ -330,18 +275,13 @@ contract ERC20SwapTaxTest is Test {
         // fails because MAX_TX - sell
         vm.expectRevert(bytes("TransferHelper: TRANSFER_FROM_FAILED"));
         vm.prank(user);
-        router.swapExactTokensForETHSupportingFeeOnTransferTokens(userBal, 0, tokenToWeth, user, block.timestamp);
+        _swapToEth(userBal, user);
 
         deal(otherUser, 10 ether);
 
         // good
         vm.prank(otherUser);
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: 0.001 ether}(
-            0,
-            wethToToken,
-            otherUser,
-            block.timestamp
-        );
+        _swapToToken(0.001 ether, otherUser);
     }
 
     function testTransferNoSwap() public {
@@ -354,11 +294,10 @@ contract ERC20SwapTaxTest is Test {
         vm.prank(user);
         token.transfer(owner, 1000); // no BL
 
-        uint256 finalUserBal = token.balanceOf(user);
-        uint256 finalOwnerBal = token.balanceOf(owner);
+        uint256 ownerDelta = token.balanceOf(owner) - initOwnerBal;
 
-        assertEq(finalOwnerBal - initOwnerBal, 1000);
-        assertEq(finalOwnerBal - initOwnerBal, initUserBal - finalUserBal);
+        assertEq(ownerDelta, 1000);
+        assertEq(ownerDelta, initUserBal - token.balanceOf(user));
     }
 
     function testBlacklisted() public {
@@ -581,12 +520,7 @@ contract ERC20SwapTaxTest is Test {
 
         token.sweepToken(address(token), owner);
 
-        uint256 finalContractBal = token.balanceOf(address(token));
-        uint256 finalOwnerBal = token.balanceOf(owner);
-
-        uint256 ownerDelta = finalOwnerBal - initOwnerBal;
-
-        assertEq(initContractBal - finalContractBal, ownerDelta);
+        assertEq(initContractBal - token.balanceOf(address(token)), token.balanceOf(owner) - initOwnerBal);
     }
 
     function testSweepEth() public {
@@ -603,12 +537,7 @@ contract ERC20SwapTaxTest is Test {
 
         token.sweepEth(owner);
 
-        uint256 finalContractBal = address(token).balance;
-        uint256 finalOwnerBal = owner.balance;
-
-        uint256 ownerDelta = finalOwnerBal - initOwnerBal;
-
-        assertEq(initContractBal - finalContractBal, ownerDelta);
+        assertEq(initContractBal - address(token).balance, owner.balance - initOwnerBal);
     }
 
     function testBlacklist() public {
