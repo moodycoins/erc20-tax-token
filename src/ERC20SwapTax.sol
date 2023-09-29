@@ -20,7 +20,10 @@ import {IUniswapV2Factory} from "./interfaces/IUniswapV2Factory.sol";
 contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
     using Math for uint256;
 
-    uint8 public immutable MAX_TAX = 5;
+    function MAX_TAX() public pure virtual returns (uint8) {
+        return 5;
+    }
+
     uint256 public immutable override initialSupply;
 
     address public immutable override v2Router;
@@ -162,11 +165,16 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
 
         if ((isBuy || isAmm[to]) && !excluded) {
             fee = amount.mulDiv(_swapFee, 100);
-            unchecked { balanceOf[address(this)] += fee; } // prettier-ignore
+
+            unchecked {
+                balanceOf[address(this)] += fee;
+            }
             emit Transfer(from, address(this), fee);
         }
 
-        unchecked { balanceOf[to] += (amount - fee); } // prettier-ignore
+        unchecked {
+            balanceOf[to] += (amount - fee);
+        }
         emit Transfer(from, to, amount - fee);
     }
 
@@ -268,7 +276,7 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
 
     /// @dev Update the max contract swap
     function updateMaxContractSwap(uint128 newMaxSwap) external onlyOwner {
-        require(newMaxSwap >=  totalSupply.mulDiv(1, 100_000), "BMS"); // >= 0.001%
+        require(newMaxSwap >= totalSupply.mulDiv(1, 100_000), "BMS"); // >= 0.001%
         require(newMaxSwap <= totalSupply.mulDiv(50, 10_000), "BMS"); // <= 0.5%
         maxContractSwap = newMaxSwap;
     }
@@ -292,7 +300,7 @@ contract ERC20SwapTax is ERC20, IERC20SwapTax, Ownable {
 
     /// @dev Update the swap fees
     function updateFees(uint8 _protocolFee, uint8 _liquidityFee, uint8 _teamFee) public onlyOwner {
-        require(_protocolFee + _liquidityFee + _teamFee <= MAX_TAX, "BF");
+        require(_protocolFee + _liquidityFee + _teamFee <= MAX_TAX(), "BF");
         totalSwapFee = _protocolFee + _liquidityFee + _teamFee;
         protocolFee = _protocolFee;
         liquidityFee = _liquidityFee;
